@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Users, Ticket, DollarSign, CirclePlus as PlusCircle, ArrowRight } from "lucide-react";
@@ -10,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/shared/StatCard";
 import PageHeader from "@/components/shared/PageHeader";
-import { supabase } from "@/lib/supabase";
 import { useAppSelector } from "@/store/hooks";
+import { useGetEventsQuery } from "@/store/api/eventsApi";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const ticketData = [
@@ -21,21 +20,21 @@ const ticketData = [
 
 export default function OrganizerDashboard() {
   const user = useAppSelector((s) => s.auth.user);
-  const [stats, setStats] = useState({ events: 0, attendees: 0, revenue: 0, upcoming: 0 });
-  const [events, setEvents] = useState<{ id: string; title: string; status: string; starts_at: string; capacity: number }[]>([]);
+  const { data: events = [] } = useGetEventsQuery(
+    { organizerId: user?.id, allStatuses: true, limit: 100 },
+    { skip: !user?.id }
+  );
 
-  useEffect(() => {
-    if (!user) return;
-    async function load() {
-      const { data: eventData, count } = await supabase.from("events").select("*", { count: "exact" }).eq("organizer_id", user!.id);
-      const upcoming = (eventData || []).filter((e) => new Date(e.starts_at) > new Date()).length;
-      const { data: bookings } = await supabase.from("bookings").select("total_amount, user_id").in("event_id", (eventData || []).map((e) => e.id));
-      const revenue = (bookings || []).reduce((s, b) => s + (b.total_amount || 0), 0);
-      setStats({ events: count || 0, attendees: bookings?.length || 0, revenue, upcoming });
-      setEvents((eventData || []).slice(0, 5) as typeof events);
-    }
-    load();
-  }, [user]);
+  const upcoming = events.filter((e) => e.starts_at && new Date(e.starts_at) > new Date()).length;
+  const sold = events.reduce(
+    (sum, e) => sum + (e.ticket_tiers?.reduce((s, t) => s + t.sold, 0) ?? 0),
+    0
+  );
+  const revenue = events.reduce((sum, e) => {
+    const tierRev =
+      e.ticket_tiers?.reduce((s, t) => s + t.sold * t.price, 0) ?? 0;
+    return sum + tierRev;
+  }, 0);
 
   return (
     <div>
@@ -44,16 +43,18 @@ export default function OrganizerDashboard() {
         description="Here's what's happening with your events"
         action={
           <Button asChild>
-            <Link to="/organizer/events/new"><PlusCircle className="w-4 h-4 mr-2" /> Create Event</Link>
+            <Link to="/organizer/events/new">
+              <PlusCircle className="w-4 h-4 mr-2" /> Create Event
+            </Link>
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard title="My Events" value={stats.events} icon={Calendar} iconColor="text-blue-600" iconBg="bg-blue-100 dark:bg-blue-900/30" delay={0} />
-        <StatCard title="Total Attendees" value={stats.attendees} icon={Users} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/30" delay={0.05} />
-        <StatCard title="Total Revenue" value={formatCurrency(stats.revenue)} icon={DollarSign} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
-        <StatCard title="Upcoming Events" value={stats.upcoming} icon={Ticket} iconColor="text-rose-600" iconBg="bg-rose-100 dark:bg-rose-900/30" delay={0.15} />
+        <StatCard title="My Events" value={events.length} icon={Calendar} iconColor="text-blue-600" iconBg="bg-blue-100 dark:bg-blue-900/30" delay={0} />
+        <StatCard title="Tickets Sold" value={sold} icon={Users} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/30" delay={0.05} />
+        <StatCard title="Est. Revenue" value={formatCurrency(revenue)} icon={DollarSign} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
+        <StatCard title="Upcoming Events" value={upcoming} icon={Ticket} iconColor="text-rose-600" iconBg="bg-rose-100 dark:bg-rose-900/30" delay={0.15} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -79,29 +80,34 @@ export default function OrganizerDashboard() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">My Events</CardTitle>
+              <CardTitle className="text-base font-semibold">Recent Events</CardTitle>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/organizer/events">View all <ArrowRight className="w-3 h-3 ml-1" /></Link>
+                <Link to="/organizer/events">
+                  View all <ArrowRight className="w-3 h-3 ml-1" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
               {events.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground text-sm mb-3">No events yet</p>
-                  <Button size="sm" asChild>
-                    <Link to="/organizer/events/new">Create your first event</Link>
-                  </Button>
-                </div>
+                <p className="text-muted-foreground text-sm text-center py-6">No events yet</p>
               ) : (
-                <div className="space-y-2">
-                  {events.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(event.starts_at)}</p>
+                <div className="space-y-3">
+                  {events.slice(0, 5).map((event) => (
+                    <Link
+                      key={event.id}
+                      to={`/organizer/events/${event.id}/edit`}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{event.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {event.starts_at ? formatDate(event.starts_at) : "Date TBD"}
+                        </p>
                       </div>
-                      <Badge variant={event.status === "published" ? "success" : "secondary"}>{event.status}</Badge>
-                    </div>
+                      <Badge variant="secondary" className="capitalize flex-shrink-0 ml-2">
+                        {event.status}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               )}

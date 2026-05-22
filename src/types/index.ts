@@ -237,3 +237,42 @@ export interface Notification {
   link: string;
   created_at: string;
 }
+
+export type StreamStatus = "scheduled" | "live" | "ended" | "failed";
+
+export interface StreamSession {
+  id: string;
+  event_id: string;
+  provider: string;
+  ingest_url: string;
+  playback_url: string;
+  status: StreamStatus;
+  started_at: string | null;
+  ended_at: string | null;
+  peak_viewers: number;
+  created_at: string;
+}
+
+export interface EngagementEvent {
+  id: string;
+  event_id: string;
+  user_id: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export type AIInsightType =
+  | "recommendation"
+  | "sentiment"
+  | "attendance_forecast"
+  | "activity_report";
+
+export interface AIInsight {
+  id: string;
+  scope: "user" | "event" | "platform";
+  scope_id: string | null;
+  insight_type: AIInsightType;
+  payload: Record<string, unknown>;
+  generated_at: string;
+}

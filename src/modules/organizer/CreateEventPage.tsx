@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import PageHeader from "@/components/shared/PageHeader";
 import { supabase } from "@/lib/supabase";
 import { useAppSelector } from "@/store/hooks";
+import { useGetCategoriesQuery, useCreateEventMutation } from "@/store/api/eventsApi";
 import { slugify } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type { Category } from "@/types";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -28,11 +28,11 @@ const schema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
-  is_online: z.boolean().default(false),
+  is_online: z.boolean(),               // removed .default(false)
   stream_url: z.string().optional(),
   starts_at: z.string().min(1, "Start date required"),
   ends_at: z.string().min(1, "End date required"),
-  capacity: z.number().min(0).default(0),
+  capacity: z.number().min(0),          // removed .default(0)
   tags: z.string().optional(),
 });
 
@@ -49,34 +49,30 @@ interface TicketTierInput {
 export default function CreateEventPage() {
   const navigate = useNavigate();
   const user = useAppSelector((s) => s.auth.user);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const [createEvent] = useCreateEventMutation();
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [tiers, setTiers] = useState<TicketTierInput[]>([{ name: "General Admission", description: "", price: 0, quantity: 100, benefits: "" }]);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { is_online: false, capacity: 0 },
+    defaultValues: {
+      is_online: false,
+      capacity: 0,
+      // optional fields can be left undefined
+    },
   });
-
-  useEffect(() => {
-    supabase.from("categories").select("*").then(({ data }) => { if (data) setCategories(data); });
-  }, []);
 
   const onSubmit = async (data: FormData) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: event, error } = await supabase.from("events").insert({
-        ...data,
-        organizer_id: user.id,
+      const event = await createEvent({
+        data,
+        organizerId: user.id,
         slug: slugify(data.title),
-        status: "pending",
-        tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        capacity: data.capacity || 0,
-      }).select().single();
-
-      if (error) throw error;
+      }).unwrap();
 
       // Create ticket tiers
       if (tiers.length > 0 && event) {

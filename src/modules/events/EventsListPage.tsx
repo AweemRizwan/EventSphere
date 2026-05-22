@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, ListFilter as Filter, Calendar, MapPin, Users, Wifi, ChevronRight } from "lucide-react";
@@ -9,44 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/shared/PageHeader";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import { supabase } from "@/lib/supabase";
+import { useGetCategoriesQuery, useGetEventsQuery } from "@/store/api/eventsApi";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import type { Event, Category } from "@/types";
+import type { Event } from "@/types";
 
 export default function EventsListPage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [eventType, setEventType] = useState("all");
+  const [eventType, setEventType] = useState<"all" | "online" | "offline">("all");
 
-  useEffect(() => {
-    supabase.from("categories").select("*").then(({ data }) => {
-      if (data) setCategories(data);
-    });
-  }, []);
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      let query = supabase
-        .from("events")
-        .select("*, organizer:profiles(full_name, avatar_url), category:categories(name, color), ticket_tiers(price, quantity, sold)")
-        .eq("status", "published")
-        .order("starts_at");
-
-      if (category !== "all") query = query.eq("category_id", category);
-      if (eventType === "online") query = query.eq("is_online", true);
-      if (eventType === "offline") query = query.eq("is_online", false);
-      if (search) query = query.ilike("title", `%${search}%`);
-
-      const { data } = await query.limit(20);
-      if (data) setEvents(data as unknown as Event[]);
-      setLoading(false);
-    }
-    load();
-  }, [search, category, eventType]);
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const { data: events = [], isLoading: loading } = useGetEventsQuery({
+    search: search || undefined,
+    categoryId: category,
+    eventType,
+    status: "published",
+  });
 
   const getMinPrice = (event: Event) => {
     if (!event.ticket_tiers?.length) return 0;
@@ -80,7 +58,7 @@ export default function EventsListPage() {
             {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={eventType} onValueChange={setEventType}>
+        <Select value={eventType} onValueChange={(v) => setEventType(v as "all" | "online" | "offline")}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="Type" />
           </SelectTrigger>

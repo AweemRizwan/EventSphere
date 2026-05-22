@@ -1,33 +1,28 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Ticket, Calendar, Globe, Star } from "lucide-react";
+import { Ticket, Calendar, Globe, Star, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/shared/StatCard";
 import PageHeader from "@/components/shared/PageHeader";
-import { supabase } from "@/lib/supabase";
 import { useAppSelector } from "@/store/hooks";
+import { useGetMyBookingsQuery } from "@/store/api/bookingsApi";
+import { useGetEventsQuery } from "@/store/api/eventsApi";
+import { useGetRecommendationsQuery } from "@/store/api/aiApi";
+import { featureFlags } from "@/lib/feature-flags";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 export default function AttendeeDashboard() {
   const user = useAppSelector((s) => s.auth.user);
-  const [bookings, setBookings] = useState<{ id: string; status: string; total_amount: number; created_at: string; event?: { title: string; starts_at: string } }[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<{ id: string; title: string; starts_at: string; venue: string; banner_url: string; is_online: boolean }[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-    async function load() {
-      const [bookRes, eventsRes] = await Promise.all([
-        supabase.from("bookings").select("id, status, total_amount, created_at, event:events(title, starts_at)").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(5),
-        supabase.from("events").select("id, title, starts_at, venue, banner_url, is_online").eq("status", "published").gte("starts_at", new Date().toISOString()).order("starts_at").limit(6),
-      ]);
-      if (bookRes.data) setBookings(bookRes.data as unknown as typeof bookings);
-      if (eventsRes.data) setUpcomingEvents(eventsRes.data);
-    }
-    load();
-  }, [user]);
+  const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !user });
+  const { data: upcomingEvents = [] } = useGetEventsQuery(
+    { status: "published", upcomingOnly: true, limit: 6 },
+    { skip: !user }
+  );
+  const { data: recommendations = [] } = useGetRecommendationsQuery(undefined, {
+    skip: !user || !featureFlags.aiInsights,
+  });
 
   const confirmed = bookings.filter((b) => b.status === "confirmed").length;
 
@@ -38,7 +33,9 @@ export default function AttendeeDashboard() {
         description="Discover amazing events happening near you"
         action={
           <Button asChild>
-            <Link to="/events"><Globe className="w-4 h-4 mr-2" /> Browse Events</Link>
+            <Link to="/events">
+              <Globe className="w-4 h-4 mr-2" /> Browse Events
+            </Link>
           </Button>
         }
       />
@@ -46,15 +43,30 @@ export default function AttendeeDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard title="My Bookings" value={bookings.length} icon={Ticket} iconColor="text-blue-600" iconBg="bg-blue-100 dark:bg-blue-900/30" delay={0} />
         <StatCard title="Confirmed Tickets" value={confirmed} icon={Calendar} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/30" delay={0.05} />
-        <StatCard title="Events Attended" value={bookings.filter((b) => b.status === "confirmed").length} icon={Star} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
+        <StatCard title="Events Attended" value={confirmed} icon={Star} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
       </div>
+
+      {featureFlags.aiInsights && recommendations.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <CardTitle className="text-base font-semibold">Recommended for you</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {recommendations.length} personalized suggestion
+            {recommendations.length !== 1 ? "s" : ""} from your booking history.
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-semibold">Upcoming Events</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link to="/events">Browse all</Link></Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/events">Browse all</Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {upcomingEvents.length === 0 ? (
@@ -62,13 +74,19 @@ export default function AttendeeDashboard() {
               ) : (
                 <div className="space-y-3">
                   {upcomingEvents.map((event) => (
-                    <Link key={event.id} to={`/events/${event.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
+                    <Link
+                      key={event.id}
+                      to={`/events/${event.id}`}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
+                    >
                       <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                         <Calendar className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(event.starts_at)} · {event.is_online ? "Online" : event.venue}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(event.starts_at)} · {event.is_online ? "Online" : event.venue}
+                        </p>
                       </div>
                     </Link>
                   ))}
@@ -82,23 +100,29 @@ export default function AttendeeDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-semibold">My Bookings</CardTitle>
-              <Button variant="ghost" size="sm" asChild><Link to="/attendee/bookings">View all</Link></Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/attendee/bookings">View all</Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {bookings.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground text-sm mb-3">No bookings yet</p>
-                  <Button size="sm" asChild><Link to="/events">Find Events</Link></Button>
+                  <Button size="sm" asChild>
+                    <Link to="/events">Find Events</Link>
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {bookings.map((b) => (
+                  {bookings.slice(0, 5).map((b) => (
                     <div key={b.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <p className="font-medium text-sm">{b.event?.title || "Event"}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(b.created_at)} · {formatCurrency(b.total_amount)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(b.created_at)} · {formatCurrency(b.total_amount)}
+                        </p>
                       </div>
-                      <Badge variant={b.status === "confirmed" ? "success" : b.status === "cancelled" ? "destructive" : "secondary"}>{b.status}</Badge>
+                      <Badge variant={b.status === "confirmed" ? "default" : "secondary"}>{b.status}</Badge>
                     </div>
                   ))}
                 </div>

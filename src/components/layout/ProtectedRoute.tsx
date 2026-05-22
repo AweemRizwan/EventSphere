@@ -1,15 +1,17 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppSelector } from "@/store/hooks";
 import type { UserRole } from "@/types";
+import { hasAnyRole } from "@/lib/permissions";
 import { Loader as Loader2 } from "lucide-react";
 
 interface Props {
-  children: React.ReactNode;
   roles?: UserRole[];
+  redirectTo?: string;
 }
 
-export default function ProtectedRoute({ children, roles }: Props) {
+export default function ProtectedRoute({ roles, redirectTo = "/login" }: Props) {
   const { user, loading } = useAppSelector((s) => s.auth);
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,8 +21,13 @@ export default function ProtectedRoute({ children, roles }: Props) {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role as UserRole)) return <Navigate to="/dashboard" replace />;
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
 
-  return <>{children}</>;
+  if (roles && !hasAnyRole(user.role, roles)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
 }

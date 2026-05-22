@@ -27,17 +27,17 @@ const navItems: NavItem[] = [
   { label: "Create Event", href: "/organizer/events/new", icon: PlusCircle, roles: ["organizer"] },
   { label: "Registrations", href: "/organizer/registrations", icon: BookOpen, roles: ["organizer"] },
   { label: "Ticket Management", href: "/organizer/tickets", icon: Ticket, roles: ["organizer"] },
-  // Attendee
-  { label: "Browse Events", href: "/events", icon: Globe, roles: ["attendee"] },
+  // Attendee & shared discovery
+  { label: "Browse Events", href: "/events", icon: Globe, roles: ["attendee", "admin", "organizer", "sponsor"] },
   { label: "My Bookings", href: "/attendee/bookings", icon: Ticket, roles: ["attendee"] },
   // Sponsor
   { label: "Opportunities", href: "/sponsor/opportunities", icon: Star, roles: ["sponsor"] },
   { label: "My Campaigns", href: "/sponsor/campaigns", icon: Megaphone, roles: ["sponsor"] },
   { label: "Sponsorships", href: "/sponsor/sponsorships", icon: Trophy, roles: ["sponsor"] },
   // Shared
-  { label: "Analytics", href: "/analytics", icon: BarChart3, roles: ["admin", "organizer", "sponsor"] },
+  { label: "Analytics", href: "/analytics/reports", icon: BarChart3, roles: ["admin", "organizer"] },
   { label: "Notifications", href: "/notifications", icon: Bell, roles: ["admin", "organizer", "attendee", "sponsor"] },
-  { label: "Live Events", href: "/events/live", icon: MessageSquare, roles: ["attendee", "organizer"] },
+  { label: "Live Events", href: "/events/live", icon: MessageSquare, roles: ["attendee", "organizer", "admin"] },
   { label: "Profile", href: "/profile", icon: Building2, roles: ["admin", "organizer", "attendee", "sponsor"] },
 ];
 

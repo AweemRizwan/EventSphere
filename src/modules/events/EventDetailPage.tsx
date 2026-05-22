@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, MapPin, Users, Wifi, Clock, Tag, ArrowLeft, Share2, Star, ChevronRight, CircleCheck as CheckCircle } from "lucide-react";
+import { Calendar, MapPin, Users, Wifi, Clock, Tag, ArrowLeft, Share2, Star, ChevronRight, CircleCheck as CheckCircle, Radio } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import { supabase } from "@/lib/supabase";
+import { useGetEventByIdQuery, useGetEventExtrasQuery } from "@/store/api/eventsApi";
+import { logEngagement } from "@/lib/engagement";
 import { formatDatetime, formatCurrency, getInitials } from "@/lib/utils";
-import type { Event, Speaker, EventSchedule } from "@/types";
 import toast from "react-hot-toast";
 import { useAppSelector } from "@/store/hooks";
 
@@ -18,32 +18,20 @@ export default function EventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useAppSelector((s) => s.auth.user);
-  const [event, setEvent] = useState<Event | null>(null);
-  const [speakers, setSpeakers] = useState<Speaker[]>([]);
-  const [schedules, setSchedules] = useState<EventSchedule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: event, isLoading: loading } = useGetEventByIdQuery(id!, { skip: !id });
+  const { data: extras } = useGetEventExtrasQuery(id!, { skip: !id });
+  const speakers = extras?.speakers ?? [];
+  const schedules = extras?.schedules ?? [];
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    async function load() {
-      const [evRes, spRes, schRes] = await Promise.all([
-        supabase.from("events").select("*, organizer:profiles(full_name, avatar_url, bio), category:categories(name, color), ticket_tiers(*)").eq("id", id).maybeSingle(),
-        supabase.from("event_speakers").select("speaker:speakers(*)").eq("event_id", id),
-        supabase.from("event_schedules").select("*").eq("event_id", id).order("starts_at"),
-      ]);
-      if (evRes.data) setEvent(evRes.data as unknown as Event);
-      if (spRes.data) setSpeakers(spRes.data.map((s: { speaker: Speaker }) => s.speaker).filter(Boolean));
-      if (schRes.data) setSchedules(schRes.data);
-      setLoading(false);
-    }
-    load();
+    if (id) logEngagement(id, "view_event");
   }, [id]);
 
   const handleBook = () => {
     if (!user) { navigate("/login"); return; }
     if (!selectedTier) { toast.error("Please select a ticket tier"); return; }
-    navigate(`/checkout/${id}?tier=${selectedTier}`);
+    navigate(`/checkout/ticket-selection?event=${id}&tier=${selectedTier}`);
   };
 
   if (loading) return <LoadingSpinner className="py-20" size="lg" />;
@@ -79,11 +67,11 @@ export default function EventDetailPage() {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-blue-600" />
-                  <div><p className="text-xs text-muted-foreground">Starts</p><p className="font-medium">{formatDatetime(event.starts_at)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Starts</p><p className="font-medium">{event.starts_at ? formatDatetime(event.starts_at) : "See description"}</p></div>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-blue-600" />
-                  <div><p className="text-xs text-muted-foreground">Ends</p><p className="font-medium">{formatDatetime(event.ends_at)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Ends</p><p className="font-medium">{event.ends_at ? formatDatetime(event.ends_at) : "See description"}</p></div>
                 </div>
                 {!event.is_online && (
                   <div className="flex items-center gap-2 text-sm">
@@ -202,6 +190,13 @@ export default function EventDetailPage() {
               <Button className="w-full" onClick={handleBook} disabled={!selectedTier}>
                 Book Now <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
+              {(event.is_online || event.stream_url) && (
+                <Link to={`/events/${event.id}/stream`} className="block">
+                  <Button variant="secondary" className="w-full">
+                    <Radio className="w-4 h-4 mr-2" /> Watch live stream
+                  </Button>
+                </Link>
+              )}
               <Button variant="outline" className="w-full" size="sm">
                 <Share2 className="w-3 h-3 mr-2" /> Share Event
               </Button>
