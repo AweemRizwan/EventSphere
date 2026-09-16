@@ -1,7 +1,7 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes, type MemoryRouterProps } from "react-router-dom";
-import { configureStore, type PreloadedState } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "@/store/slices/authSlice";
 import uiReducer from "@/store/slices/uiSlice";
 import { eventsApi } from "@/store/api/eventsApi";
@@ -31,7 +31,7 @@ export function mockUser(role: UserRole, overrides: Partial<Profile> = {}): Prof
   };
 }
 
-function createTestStore(preloadedState?: PreloadedState<RootState>) {
+function createTestStore(preloadedState?: Partial<RootState>) {
   return configureStore({
     reducer: {
       auth: authReducer,
@@ -50,7 +50,7 @@ function createTestStore(preloadedState?: PreloadedState<RootState>) {
         streamsApi.middleware,
         aiApi.middleware
       ),
-    preloadedState,
+    preloadedState: preloadedState as RootState,
   });
 }
 
@@ -75,8 +75,8 @@ export function renderModule(ui: React.ReactElement, options: Options = {}) {
 
   const store = createTestStore({
     auth: { user, loading, error: null },
-    ui: { sidebarOpen: true },
-  } as PreloadedState<RootState>);
+    ui: { sidebarOpen: true, theme: "light" },
+  } as Partial<RootState>);
 
   const routedUi = routePattern ? (
     <Routes>

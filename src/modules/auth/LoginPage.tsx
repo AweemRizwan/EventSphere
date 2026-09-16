@@ -29,12 +29,14 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword(data);
+    const { data: authData, error } = await supabase.auth.signInWithPassword(data);
     if (error) {
       toast.error(error.message);
-    } else {
+    } else if (authData.user) {
       toast.success("Welcome back!");
       navigate("/dashboard");
+    } else {
+      toast.error("Login succeeded, but no user session was returned");
     }
     setLoading(false);
   };

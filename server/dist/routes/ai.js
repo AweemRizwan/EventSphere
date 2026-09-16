@@ -4,6 +4,7 @@ import { requireRole } from "../middleware/rbac.js";
 import { env } from "../config/env.js";
 import * as aiService from "../services/aiService.js";
 export const aiRouter = Router();
+const getParam = (value) => Array.isArray(value) ? value[0] : value ?? "";
 aiRouter.get("/recommendations", requireAuth, async (req, res) => {
     if (!env.featureAi) {
         return res.json([]);
@@ -21,7 +22,8 @@ aiRouter.get("/events/:eventId/insights", requireAuth, requireRole("organizer", 
         return res.json([]);
     }
     try {
-        const data = await aiService.getEventInsights(req.params.eventId);
+        const eventId = getParam(req.params.eventId);
+        const data = await aiService.getEventInsights(eventId);
         res.json(data);
     }
     catch (e) {

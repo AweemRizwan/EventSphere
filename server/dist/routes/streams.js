@@ -3,9 +3,10 @@ import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/rbac.js";
 import * as streamService from "../services/streamService.js";
 export const streamsRouter = Router();
+const getParam = (value) => Array.isArray(value) ? value[0] : value ?? "";
 streamsRouter.get("/:eventId/playback", requireAuth, async (req, res) => {
     try {
-        const { eventId } = req.params;
+        const eventId = getParam(req.params.eventId);
         const user = req.user;
         const event = await streamService.getEventStreamUrl(eventId);
         if (!event)
@@ -35,7 +36,7 @@ streamsRouter.get("/:eventId/playback", requireAuth, async (req, res) => {
 });
 streamsRouter.post("/:eventId/start", requireAuth, requireRole("organizer", "admin"), async (req, res) => {
     try {
-        const { eventId } = req.params;
+        const eventId = getParam(req.params.eventId);
         const { provider = "custom" } = req.body ?? {};
         if (req.user.role === "organizer") {
             const event = await streamService.getEventStreamUrl(eventId);
@@ -52,7 +53,8 @@ streamsRouter.post("/:eventId/start", requireAuth, requireRole("organizer", "adm
 });
 streamsRouter.post("/:eventId/end", requireAuth, requireRole("organizer", "admin"), async (req, res) => {
     try {
-        const session = await streamService.endStream(req.params.eventId);
+        const eventId = getParam(req.params.eventId);
+        const session = await streamService.endStream(eventId);
         res.json(session);
     }
     catch (e) {
