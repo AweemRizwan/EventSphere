@@ -200,12 +200,15 @@ describe("Module smoke tests", () => {
   });
 
   describe("checkout", () => {
-    it("TicketSelectionPage renders", () => {
+    it("TicketSelectionPage reads the event and tier from the URL", () => {
       renderModule(<TicketSelectionPage />, {
+        route: "/checkout/ticket-selection?event=evt-1&tier=tier-1",
         user: mockUser("attendee"),
         loading: false,
       });
-      expect(document.body.textContent?.length).toBeGreaterThan(10);
+
+      expect(screen.getByText(/review your booking/i)).toBeInTheDocument();
+      expect(screen.getByText(/event id/i)).toBeInTheDocument();
     });
 
     it("PaymentFormPage renders", () => {
@@ -261,6 +264,26 @@ describe("Module smoke tests", () => {
     it("ProfilePage renders", () => {
       renderModule(<ProfilePage />, { user: mockUser("attendee"), loading: false });
       expect(screen.getByText(/profile/i)).toBeInTheDocument();
+    });
+
+    it("Organizer profile page includes default payment details", () => {
+      const organizer = mockUser("organizer", {
+        metadata: {
+          payment_details: {
+            account_name: "Organizer Co",
+            bank_name: "North Bank",
+            account_number: "123456789",
+            wallet_number: "@organizerwallet",
+            currency: "USD",
+            notes: "Please send a receipt",
+          },
+        },
+      });
+
+      renderModule(<ProfilePage />, { user: organizer, loading: false });
+      expect(screen.getByRole("heading", { name: /default payment details/i })).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Organizer Co")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("North Bank")).toBeInTheDocument();
     });
   });
 

@@ -13,6 +13,9 @@ export interface Profile {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  metadata?: {
+    payment_details?: OrganizerPaymentDetails;
+  };
 }
 
 export interface Category {
@@ -27,6 +30,15 @@ export interface Category {
 }
 
 export type EventStatus = "draft" | "pending" | "published" | "cancelled" | "completed";
+
+export interface OrganizerPaymentDetails {
+  account_name: string;
+  bank_name: string;
+  account_number: string;
+  wallet_number: string;
+  currency: string;
+  notes: string;
+}
 
 export interface Event {
   id: string;
@@ -51,6 +63,11 @@ export interface Event {
   tags: string[];
   created_at: string;
   updated_at: string;
+  metadata?: {
+    location?: Record<string, unknown>;
+    schedule?: Record<string, unknown>;
+    payment_details?: OrganizerPaymentDetails;
+  };
   // Joined
   organizer?: Profile;
   category?: Category;

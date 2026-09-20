@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
   // Organizer
   { label: "My Events", href: "/organizer/events", icon: Calendar, roles: ["organizer"] },
   { label: "Create Event", href: "/organizer/events/new", icon: PlusCircle, roles: ["organizer"] },
+  { label: "Payment Approvals", href: "/organizer/payments", icon: Ticket, roles: ["organizer"] },
   { label: "Registrations", href: "/organizer/registrations", icon: BookOpen, roles: ["organizer"] },
   { label: "Ticket Management", href: "/organizer/tickets", icon: Ticket, roles: ["organizer"] },
   // Attendee & shared discovery

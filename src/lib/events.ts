@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Event, EventStatus } from "@/types";
 
+export interface OrganizerPaymentDetails {
+  account_name: string;
+  bank_name: string;
+  account_number: string;
+  wallet_number: string;
+  currency: string;
+  notes: string;
+}
+
 export interface EventFormInput {
   title: string;
   description: string;
@@ -16,6 +25,7 @@ export interface EventFormInput {
   ends_at: string;
   capacity: number;
   tags?: string;
+  payment_details?: OrganizerPaymentDetails;
 }
 
 type EventRow = Record<string, unknown>;
@@ -123,6 +133,7 @@ export function buildEventRow(
     metadata: {
       location: buildLocationMeta(data),
       schedule: buildScheduleMeta(data),
+      payment_details: data.payment_details ?? {},
     },
   };
 }
@@ -255,6 +266,7 @@ export function normalizeEvent(row: EventRow): Event {
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
+    metadata: (meta as Event["metadata"]) ?? undefined,
     organizer: row.organizer as Event["organizer"],
     category: row.category as Event["category"],
     ticket_tiers: row.ticket_tiers as Event["ticket_tiers"],

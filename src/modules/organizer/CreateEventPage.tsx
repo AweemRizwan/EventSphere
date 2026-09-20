@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +54,15 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [tiers, setTiers] = useState<TicketTierInput[]>([{ name: "General Admission", description: "", price: 0, quantity: 100, benefits: "" }]);
+  const [paymentDetails, setPaymentDetails] = useState({
+    account_name: "EventSphere Ticket Desk",
+    bank_name: "Trust Bank",
+    account_number: "9876 5432 10",
+    wallet_number: "",
+    currency: "USD",
+    notes: "Please mention your ticket name and event title when paying.",
+  });
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -64,12 +73,40 @@ export default function CreateEventPage() {
     },
   });
 
+  const bannerUrl = watch("banner_url") || "";
+
+  useEffect(() => {
+    if (!user?.metadata?.payment_details) return;
+    setPaymentDetails((current) => ({
+      ...current,
+      ...user.metadata!.payment_details!,
+    }));
+  }, [user?.id, user?.metadata]);
+
+  const handleBannerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file for the banner.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setValue("banner_url", result, { shouldValidate: true, shouldDirty: true });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const onSubmit = async (data: FormData) => {
     if (!user) return;
     setLoading(true);
     try {
       const event = await createEvent({
-        data,
+        data: { ...data, payment_details: paymentDetails },
         organizerId: user.id,
         slug: slugify(data.title),
       }).unwrap();
@@ -134,8 +171,26 @@ export default function CreateEventPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Banner Image URL</Label>
-                  <Input placeholder="https://..." {...register("banner_url")} />
+                  <Label>Banner Image</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://... or upload a file"
+                      {...register("banner_url")}
+                    />
+                    <Button type="button" variant="outline" onClick={() => bannerInputRef.current?.click()}>
+                      Upload
+                    </Button>
+                  </div>
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBannerUpload}
+                  />
+                  {bannerUrl && (
+                    <img src={bannerUrl} alt="Banner preview" className="mt-2 h-28 w-full rounded-md object-cover border" />
+                  )}
                   {errors.banner_url && <p className="text-xs text-red-500">{errors.banner_url.message}</p>}
                 </div>
               </div>
@@ -148,6 +203,38 @@ export default function CreateEventPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Card>
+            <CardHeader><CardTitle className="text-base font-semibold">Organizer payment details</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Account name</Label>
+                <Input value={paymentDetails.account_name} onChange={(event) => setPaymentDetails((current) => ({ ...current, account_name: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bank name</Label>
+                <Input value={paymentDetails.bank_name} onChange={(event) => setPaymentDetails((current) => ({ ...current, bank_name: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Account / wallet number</Label>
+                <Input value={paymentDetails.account_number} onChange={(event) => setPaymentDetails((current) => ({ ...current, account_number: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Alternative wallet number</Label>
+                <Input value={paymentDetails.wallet_number} onChange={(event) => setPaymentDetails((current) => ({ ...current, wallet_number: event.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Currency</Label>
+                <Input value={paymentDetails.currency} onChange={(event) => setPaymentDetails((current) => ({ ...current, currency: event.target.value }))} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Payment instructions</Label>
+                <Textarea rows={3} value={paymentDetails.notes} onChange={(event) => setPaymentDetails((current) => ({ ...current, notes: event.target.value }))} />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardHeader><CardTitle className="text-base font-semibold">Date & Time</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">

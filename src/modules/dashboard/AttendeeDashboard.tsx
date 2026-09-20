@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Ticket, Calendar, Globe, Star, Sparkles } from "lucide-react";
@@ -11,11 +12,13 @@ import { useGetMyBookingsQuery } from "@/store/api/bookingsApi";
 import { useGetEventsQuery } from "@/store/api/eventsApi";
 import { useGetRecommendationsQuery } from "@/store/api/aiApi";
 import { featureFlags } from "@/lib/feature-flags";
+import { getManualBookingsForUser, mergeUserBookings, type ManualBookingRecord } from "@/lib/manual-bookings";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 export default function AttendeeDashboard() {
   const user = useAppSelector((s) => s.auth.user);
   const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !user });
+  const [manualBookings, setManualBookings] = useState<ManualBookingRecord[]>([]);
   const { data: upcomingEvents = [] } = useGetEventsQuery(
     { status: "published", upcomingOnly: true, limit: 6 },
     { skip: !user }
@@ -24,7 +27,27 @@ export default function AttendeeDashboard() {
     skip: !user || !featureFlags.aiInsights,
   });
 
-  const confirmed = bookings.filter((b) => b.status === "confirmed").length;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadManualBookings = async () => {
+      if (!user?.id) {
+        if (isMounted) setManualBookings([]);
+        return;
+      }
+
+      const records = await getManualBookingsForUser(user.id);
+      if (isMounted) setManualBookings(records);
+    };
+
+    void loadManualBookings();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  const mergedBookings = mergeUserBookings(bookings, manualBookings);
+  const confirmed = mergedBookings.filter((b) => String(b.status).toLowerCase() === "confirmed").length;
 
   return (
     <div>
@@ -41,7 +64,7 @@ export default function AttendeeDashboard() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard title="My Bookings" value={bookings.length} icon={Ticket} iconColor="text-blue-600" iconBg="bg-blue-100 dark:bg-blue-900/30" delay={0} />
+        <StatCard title="My Bookings" value={mergedBookings.length} icon={Ticket} iconColor="text-blue-600" iconBg="bg-blue-100 dark:bg-blue-900/30" delay={0} />
         <StatCard title="Confirmed Tickets" value={confirmed} icon={Calendar} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/30" delay={0.05} />
         <StatCard title="Events Attended" value={confirmed} icon={Star} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
       </div>
@@ -105,7 +128,7 @@ export default function AttendeeDashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              {bookings.length === 0 ? (
+              {mergedBookings.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground text-sm mb-3">No bookings yet</p>
                   <Button size="sm" asChild>
@@ -114,12 +137,12 @@ export default function AttendeeDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {bookings.slice(0, 5).map((b) => (
+                  {mergedBookings.slice(0, 5).map((b) => (
                     <div key={b.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <p className="font-medium text-sm">{b.event?.title || "Event"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(b.created_at)} · {formatCurrency(b.total_amount)}
+                          {formatDate(b.created_at ?? b.event?.starts_at ?? new Date().toISOString())} · {formatCurrency(b.total_amount)}
                         </p>
                       </div>
                       <Badge variant={b.status === "confirmed" ? "default" : "secondary"}>{b.status}</Badge>

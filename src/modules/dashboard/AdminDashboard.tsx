@@ -36,17 +36,26 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadStats() {
-      const [usersRes, eventsRes, bookingsRes] = await Promise.all([
+      const [usersRes, eventsRes, bookingsRes, manualRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact" }),
         supabase.from("events").select("id", { count: "exact" }),
-        supabase.from("bookings").select("total_amount"),
+        supabase.from("bookings").select("total_amount, status"),
+        supabase.from("manual_ticket_requests").select("total_amount, status"),
       ]);
-      const revenue = (bookingsRes.data || []).reduce((s, b) => s + (b.total_amount || 0), 0);
+
+      const confirmedBookings = (bookingsRes.data || []).filter((b) => b.status === "confirmed");
+      const confirmedManualBookings = (manualRes.data || []).filter((b) => b.status === "confirmed");
+
+      const revenue = [
+        ...confirmedBookings.map((b) => Number(b.total_amount || 0)),
+        ...confirmedManualBookings.map((b) => Number(b.total_amount || 0)),
+      ].reduce((sum, amount) => sum + amount, 0);
+
       setStats({
         users: usersRes.count || 0,
         events: eventsRes.count || 0,
         revenue,
-        bookings: bookingsRes.data?.length || 0,
+        bookings: confirmedBookings.length + confirmedManualBookings.length,
       });
     }
 

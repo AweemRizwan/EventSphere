@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Users, Ticket, DollarSign, CirclePlus as PlusCircle, ArrowRight } from "lucide-react";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/shared/StatCard";
 import PageHeader from "@/components/shared/PageHeader";
+import { supabase } from "@/lib/supabase";
 import { useAppSelector } from "@/store/hooks";
 import { useGetEventsQuery } from "@/store/api/eventsApi";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -24,17 +26,45 @@ export default function OrganizerDashboard() {
     { organizerId: user?.id, allStatuses: true, limit: 100 },
     { skip: !user?.id }
   );
+  const [manualBookings, setManualBookings] = useState<{ id: string; event_id: string; total_amount: number; status: string }[]>([]);
+
+  useEffect(() => {
+    if (!user?.id || events.length === 0) {
+      setManualBookings([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadManualBookings = async () => {
+      const { data } = await supabase.from("manual_ticket_requests").select("id, event_id, total_amount, status");
+      if (isMounted && data) {
+        setManualBookings(data as typeof manualBookings);
+      }
+    };
+
+    void loadManualBookings();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, events.length]);
+
+  const organizerEventIds = useMemo(() => new Set(events.map((event) => event.id)), [events]);
+  const confirmedManualBookings = useMemo(
+    () => manualBookings.filter((booking) => organizerEventIds.has(booking.event_id) && booking.status === "confirmed"),
+    [manualBookings, organizerEventIds]
+  );
 
   const upcoming = events.filter((e) => e.starts_at && new Date(e.starts_at) > new Date()).length;
   const sold = events.reduce(
     (sum, e) => sum + (e.ticket_tiers?.reduce((s, t) => s + t.sold, 0) ?? 0),
     0
-  );
+  ) + confirmedManualBookings.length;
   const revenue = events.reduce((sum, e) => {
     const tierRev =
       e.ticket_tiers?.reduce((s, t) => s + t.sold * t.price, 0) ?? 0;
     return sum + tierRev;
-  }, 0);
+  }, 0) + confirmedManualBookings.reduce((sum, booking) => sum + Number(booking.total_amount || 0), 0);
 
   return (
     <div>

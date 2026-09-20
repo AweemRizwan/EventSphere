@@ -36,6 +36,7 @@ import LiveEventsPage from "@/modules/stream/LiveEventsPage";
 import NotificationsPage from "@/modules/notifications/NotificationsPage";
 import SponsorPlaceholderPage from "@/modules/sponsor/SponsorPlaceholderPage";
 import ProfilePage from "@/modules/profile/ProfilePage";
+import ManualPaymentApprovalsPage from "@/modules/organizer/ManualPaymentApprovalsPage";
 
 export default function App() {
   return (
@@ -92,6 +93,7 @@ export default function App() {
                   <Route path="/organizer/events" element={<OrganizerEventsPage />} />
                   <Route path="/organizer/events/new" element={<CreateEventPage />} />
                   <Route path="/organizer/events/:id/edit" element={<EditEventPage />} />
+                  <Route path="/organizer/payments" element={<ManualPaymentApprovalsPage />} />
                   <Route
                     path="/organizer/registrations"
                     element={

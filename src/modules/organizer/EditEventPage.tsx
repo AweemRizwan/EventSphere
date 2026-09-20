@@ -53,6 +53,14 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [eventStatus, setEventStatus] = useState<EventStatus>("draft");
+  const [paymentDetails, setPaymentDetails] = useState({
+    account_name: "EventSphere Ticket Desk",
+    bank_name: "Trust Bank",
+    account_number: "9876 5432 10",
+    wallet_number: "",
+    currency: "USD",
+    notes: "Please mention your ticket name and event title when paying.",
+  });
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -68,6 +76,14 @@ export default function EditEventPage() {
     }
     setEventStatus(event.status);
     setIsOnline(event.is_online);
+    setPaymentDetails({
+      account_name: (event.metadata as { payment_details?: { account_name?: string } } | undefined)?.payment_details?.account_name ?? "EventSphere Ticket Desk",
+      bank_name: (event.metadata as { payment_details?: { bank_name?: string } } | undefined)?.payment_details?.bank_name ?? "Trust Bank",
+      account_number: (event.metadata as { payment_details?: { account_number?: string } } | undefined)?.payment_details?.account_number ?? "9876 5432 10",
+      wallet_number: (event.metadata as { payment_details?: { wallet_number?: string } } | undefined)?.payment_details?.wallet_number ?? "",
+      currency: (event.metadata as { payment_details?: { currency?: string } } | undefined)?.payment_details?.currency ?? "USD",
+      notes: (event.metadata as { payment_details?: { notes?: string } } | undefined)?.payment_details?.notes ?? "Please mention your ticket name and event title when paying.",
+    });
     reset({
       title: event.title,
       description: event.description
@@ -102,7 +118,7 @@ export default function EditEventPage() {
     setLoading(true);
     try {
       await updateEvent({
-        data,
+        data: { ...data, payment_details: paymentDetails },
         organizerId: user.id,
         slug: slugify(data.title),
         eventId: id,
@@ -194,6 +210,36 @@ export default function EditEventPage() {
                 <Input type="number" placeholder="Capacity" {...register("capacity", { valueAsNumber: true })} />
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base font-semibold">Organizer payment details</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Account name</Label>
+              <Input value={paymentDetails.account_name} onChange={(event) => setPaymentDetails((current) => ({ ...current, account_name: event.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Bank name</Label>
+              <Input value={paymentDetails.bank_name} onChange={(event) => setPaymentDetails((current) => ({ ...current, bank_name: event.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account / wallet number</Label>
+              <Input value={paymentDetails.account_number} onChange={(event) => setPaymentDetails((current) => ({ ...current, account_number: event.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Alternative wallet number</Label>
+              <Input value={paymentDetails.wallet_number} onChange={(event) => setPaymentDetails((current) => ({ ...current, wallet_number: event.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Input value={paymentDetails.currency} onChange={(event) => setPaymentDetails((current) => ({ ...current, currency: event.target.value }))} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Payment instructions</Label>
+              <Textarea rows={3} value={paymentDetails.notes} onChange={(event) => setPaymentDetails((current) => ({ ...current, notes: event.target.value }))} />
+            </div>
           </CardContent>
         </Card>
 
