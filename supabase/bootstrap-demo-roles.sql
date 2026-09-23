@@ -51,6 +51,12 @@ create policy "Users can insert own profile"
   to authenticated
   with check (auth.uid() = id);
 
+drop policy if exists "Service role can insert profiles" on public.profiles;
+create policy "Service role can insert profiles"
+  on public.profiles for insert
+  to service_role
+  with check (true);
+
 -- Demo users
 -- These emails must already exist in auth.users before profile rows are created.
 insert into public.profiles (id, email, full_name, role, is_active, created_at, updated_at)

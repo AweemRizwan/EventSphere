@@ -40,6 +40,17 @@ export interface OrganizerPaymentDetails {
   notes: string;
 }
 
+export interface EventCertificateSettings {
+  enabled?: boolean;
+  title?: string;
+  subtitle?: string;
+  message?: string;
+  template?: "classic" | "minimal" | "premium";
+  signature_name?: string;
+  signature_title?: string;
+  background_url?: string;
+}
+
 export interface Event {
   id: string;
   organizer_id: string;
@@ -67,6 +78,7 @@ export interface Event {
     location?: Record<string, unknown>;
     schedule?: Record<string, unknown>;
     payment_details?: OrganizerPaymentDetails;
+    certificate?: EventCertificateSettings;
   };
   // Joined
   organizer?: Profile;

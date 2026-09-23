@@ -30,7 +30,8 @@ const navItems: NavItem[] = [
   { label: "Ticket Management", href: "/organizer/tickets", icon: Ticket, roles: ["organizer"] },
   // Attendee & shared discovery
   { label: "Browse Events", href: "/events", icon: Globe, roles: ["attendee", "admin", "organizer", "sponsor"] },
-  { label: "My Bookings", href: "/attendee/bookings", icon: Ticket, roles: ["attendee"] },
+  { label: "My Bookings", href: "/attendee/bookings", icon: Ticket, roles: ["attendee", "admin", "organizer"] },
+  { label: "Participation Summary", href: "/attendee/participations", icon: BookOpen, roles: ["attendee", "admin", "organizer"] },
   // Sponsor
   { label: "Opportunities", href: "/sponsor/opportunities", icon: Star, roles: ["sponsor"] },
   { label: "My Campaigns", href: "/sponsor/campaigns", icon: Megaphone, roles: ["sponsor"] },

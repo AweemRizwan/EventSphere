@@ -62,6 +62,8 @@ export default function CreateEventPage() {
     currency: "USD",
     notes: "Please mention your ticket name and event title when paying.",
   });
+  const [certificateEnabled, setCertificateEnabled] = useState(true);
+  const [certificateTemplate, setCertificateTemplate] = useState<"classic" | "minimal" | "premium">("classic");
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
@@ -106,7 +108,17 @@ export default function CreateEventPage() {
     setLoading(true);
     try {
       const event = await createEvent({
-        data: { ...data, payment_details: paymentDetails },
+        data: {
+          ...data,
+          payment_details: paymentDetails,
+          certificate_enabled: certificateEnabled,
+          certificate_template: certificateTemplate,
+          certificate_title: data.title ? `${data.title} Certificate` : "Certificate of Participation",
+          certificate_subtitle: "This is to certify that",
+          certificate_message: "has successfully attended this event.",
+          certificate_signature_name: user.full_name || "Event Organizer",
+          certificate_signature_title: "Organizer",
+        },
         organizerId: user.id,
         slug: slugify(data.title),
       }).unwrap();
@@ -229,6 +241,49 @@ export default function CreateEventPage() {
               <div className="col-span-2 space-y-1.5">
                 <Label>Payment instructions</Label>
                 <Textarea rows={3} value={paymentDetails.notes} onChange={(event) => setPaymentDetails((current) => ({ ...current, notes: event.target.value }))} />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold">Certificates</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Enable</Label>
+                  <Switch checked={certificateEnabled} onCheckedChange={setCertificateEnabled} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Certificate title</Label>
+                  <Input placeholder="Certificate of Participation" disabled={!certificateEnabled} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Template</Label>
+                  <Select value={certificateTemplate} onValueChange={(value) => setCertificateTemplate(value as "classic" | "minimal" | "premium")} disabled={!certificateEnabled}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="classic">Classic</SelectItem>
+                      <SelectItem value="minimal">Minimal</SelectItem>
+                      <SelectItem value="premium">Premium</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Certificate message</Label>
+                <Textarea
+                  rows={3}
+                  defaultValue="has successfully attended this event and completed the session."
+                  disabled={!certificateEnabled}
+                />
               </div>
             </CardContent>
           </Card>

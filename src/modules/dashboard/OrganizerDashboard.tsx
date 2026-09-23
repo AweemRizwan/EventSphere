@@ -87,6 +87,18 @@ export default function OrganizerDashboard() {
         <StatCard title="Upcoming Events" value={upcoming} icon={Ticket} iconColor="text-rose-600" iconBg="bg-rose-100 dark:bg-rose-900/30" delay={0.15} />
       </div>
 
+      <Card className="mb-6">
+        <CardContent className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Participation summary</p>
+            <p className="font-semibold">Track attended events and certificate access</p>
+          </div>
+          <Button asChild>
+            <Link to="/attendee/participations">Open summary</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>

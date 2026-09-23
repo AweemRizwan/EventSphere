@@ -14,10 +14,11 @@ import toast from "react-hot-toast";
 export default function OrganizerEventsPage() {
   const user = useAppSelector((s) => s.auth.user);
   const navigate = useNavigate();
-  const { data: events = [], isLoading: loading } = useGetEventsQuery(
+  const { data: events = [], isLoading, currentData } = useGetEventsQuery(
     { organizerId: user?.id, allStatuses: true, limit: 100 },
     { skip: !user?.id }
   );
+  const showLoading = isLoading && !currentData;
   const [deleteEvent] = useDeleteEventMutation();
 
   const handleDelete = async (id: string) => {
@@ -38,7 +39,7 @@ export default function OrganizerEventsPage() {
     completed: "success",
   };
 
-  if (loading) return <LoadingSpinner className="py-20" size="lg" />;
+  if (showLoading) return <LoadingSpinner className="py-20" size="lg" />;
 
   return (
     <div>

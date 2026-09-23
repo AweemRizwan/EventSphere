@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Users, Calendar, DollarSign, TrendingUp, Activity, Eye, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from "lucide-react";
 import {
@@ -7,6 +8,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import StatCard from "@/components/shared/StatCard";
 import PageHeader from "@/components/shared/PageHeader";
 import { supabase } from "@/lib/supabase";
@@ -89,6 +91,18 @@ export default function AdminDashboard() {
         <StatCard title="Total Revenue" value={formatCurrency(stats.revenue)} change="+23% this month" changeType="positive" icon={DollarSign} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
         <StatCard title="Total Bookings" value={stats.bookings.toLocaleString()} change="+15% this month" changeType="positive" icon={TrendingUp} iconColor="text-rose-600" iconBg="bg-rose-100 dark:bg-rose-900/30" delay={0.15} />
       </div>
+
+      <Card className="mb-6">
+        <CardContent className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Participation summary</p>
+            <p className="font-semibold">Review attended events and certificates</p>
+          </div>
+          <Button asChild>
+            <Link to="/attendee/participations">Open summary</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">

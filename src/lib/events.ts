@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Event, EventStatus } from "@/types";
+import type { Event, EventCertificateSettings, EventStatus } from "@/types";
 
 export interface OrganizerPaymentDetails {
   account_name: string;
@@ -26,6 +26,14 @@ export interface EventFormInput {
   capacity: number;
   tags?: string;
   payment_details?: OrganizerPaymentDetails;
+  certificate_enabled?: boolean;
+  certificate_title?: string;
+  certificate_subtitle?: string;
+  certificate_message?: string;
+  certificate_template?: "classic" | "minimal" | "premium";
+  certificate_signature_name?: string;
+  certificate_signature_title?: string;
+  certificate_background_url?: string;
 }
 
 type EventRow = Record<string, unknown>;
@@ -134,6 +142,16 @@ export function buildEventRow(
       location: buildLocationMeta(data),
       schedule: buildScheduleMeta(data),
       payment_details: data.payment_details ?? {},
+      certificate: {
+        enabled: !!data.certificate_enabled,
+        title: data.certificate_title || "Certificate of Participation",
+        subtitle: data.certificate_subtitle || "This is to certify that",
+        message: data.certificate_message || "has successfully participated in this event.",
+        template: data.certificate_template || "classic",
+        signature_name: data.certificate_signature_name || "Event Organizer",
+        signature_title: data.certificate_signature_title || "Organizer",
+        background_url: data.certificate_background_url || "",
+      },
     },
   };
 }
@@ -238,6 +256,7 @@ export function normalizeEvent(row: EventRow): Event {
   const meta = (row.metadata as Record<string, unknown>) ?? {};
   const location = (meta.location as Record<string, unknown>) ?? {};
   const schedule = (meta.schedule as Record<string, unknown>) ?? {};
+  const certificate = (meta.certificate as Record<string, unknown>) ?? {};
 
   const str = (v: unknown, fallback = "") => (typeof v === "string" ? v : fallback);
   const num = (v: unknown, fallback = 0) => (typeof v === "number" ? v : fallback);
@@ -266,7 +285,10 @@ export function normalizeEvent(row: EventRow): Event {
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
-    metadata: (meta as Event["metadata"]) ?? undefined,
+    metadata: {
+      ...(meta as Record<string, unknown>),
+      certificate: certificate as EventCertificateSettings | undefined,
+    },
     organizer: row.organizer as Event["organizer"],
     category: row.category as Event["category"],
     ticket_tiers: row.ticket_tiers as Event["ticket_tiers"],

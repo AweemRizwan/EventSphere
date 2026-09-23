@@ -19,12 +19,13 @@ export default function EventsListPage() {
   const [eventType, setEventType] = useState<"all" | "online" | "offline">("all");
 
   const { data: categories = [] } = useGetCategoriesQuery();
-  const { data: events = [], isLoading: loading } = useGetEventsQuery({
+  const { data: events = [], isLoading, currentData } = useGetEventsQuery({
     search: search || undefined,
     categoryId: category,
     eventType,
     status: "published",
   });
+  const showLoading = isLoading && !currentData;
 
   const getMinPrice = (event: Event) => {
     if (!event.ticket_tiers?.length) return 0;
@@ -70,7 +71,7 @@ export default function EventsListPage() {
         </Select>
       </div>
 
-      {loading ? (
+      {showLoading ? (
         <LoadingSpinner className="py-20" size="lg" />
       ) : events.length === 0 ? (
         <div className="text-center py-20">

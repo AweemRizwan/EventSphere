@@ -69,6 +69,18 @@ export default function AttendeeDashboard() {
         <StatCard title="Events Attended" value={confirmed} icon={Star} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/30" delay={0.1} />
       </div>
 
+      <Card className="mb-6">
+        <CardContent className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Your participation history</p>
+            <p className="font-semibold">View attending records and available certificates</p>
+          </div>
+          <Button asChild>
+            <Link to="/attendee/participations">Open records</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {featureFlags.aiInsights && recommendations.length > 0 && (
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center gap-2 pb-2">

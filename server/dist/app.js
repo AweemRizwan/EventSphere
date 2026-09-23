@@ -5,9 +5,10 @@ import { env } from "./config/env.js";
 import { streamsRouter } from "./routes/streams.js";
 import { aiRouter } from "./routes/ai.js";
 import { webhooksRouter } from "./routes/webhooks.js";
+const helmetMiddleware = helmet;
 export function createApp() {
     const app = express();
-    app.use(helmet());
+    app.use(helmetMiddleware());
     app.use(cors({
         origin: env.corsOrigin,
         credentials: true,

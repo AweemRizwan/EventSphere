@@ -23,6 +23,8 @@ import LandingPage from "@/modules/LandingPage";
 import TicketSelectionPage from "@/modules/checkout/TicketSelectionPage";
 import PaymentFormPage from "@/modules/checkout/PaymentFormPage";
 import AttendeeBookingsPage from "@/modules/attendee/AttendeeBookingsPage";
+import AttendeeParticipationPage from "@/modules/attendee/AttendeeParticipationPage";
+import EventCertificatePage from "@/modules/attendee/EventCertificatePage";
 import PaymentHistoryPage from "@/modules/attendee/PaymentHistoryPage";
 import AnalyticsReportsPage from "@/modules/analytics/AnalyticsReportsPage";
 import AnalyticsExportsPage from "@/modules/analytics/AnalyticsExportsPage";
@@ -64,9 +66,11 @@ export default function App() {
                 </Route>
 
                 {/* Attendee */}
-                <Route element={<RoleRoute roles={["attendee", "admin"]} />}>
+                <Route element={<RoleRoute roles={["attendee", "admin", "organizer"]} />}>
                   <Route path="/attendee" element={<Navigate to="/attendee/bookings" replace />} />
                   <Route path="/attendee/bookings" element={<AttendeeBookingsPage />} />
+                  <Route path="/attendee/participations" element={<AttendeeParticipationPage />} />
+                  <Route path="/attendee/certificate/:eventId" element={<EventCertificatePage />} />
                   <Route path="/attendee/payment-history" element={<PaymentHistoryPage />} />
                 </Route>
 

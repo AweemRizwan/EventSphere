@@ -20,11 +20,12 @@ import toast from "react-hot-toast";
 export default function AdminEventsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const { data: events = [], isLoading: loading } = useGetEventsQuery({
+  const { data: events = [], isLoading, currentData } = useGetEventsQuery({
     allStatuses: true,
     search: search || undefined,
     limit: 50,
   });
+  const showLoading = isLoading && !currentData;
   const [updateStatus] = useUpdateEventStatusMutation();
   const [deleteEvent] = useDeleteEventMutation();
 
@@ -54,7 +55,7 @@ export default function AdminEventsPage() {
     cancelled: "destructive",
   };
 
-  if (loading) return <LoadingSpinner className="py-20" size="lg" />;
+  if (showLoading) return <LoadingSpinner className="py-20" size="lg" />;
 
   return (
     <div>

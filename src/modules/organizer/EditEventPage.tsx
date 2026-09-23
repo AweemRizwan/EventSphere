@@ -61,6 +61,8 @@ export default function EditEventPage() {
     currency: "USD",
     notes: "Please mention your ticket name and event title when paying.",
   });
+  const [certificateEnabled, setCertificateEnabled] = useState(true);
+  const [certificateTemplate, setCertificateTemplate] = useState<"classic" | "minimal" | "premium">("classic");
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -84,6 +86,9 @@ export default function EditEventPage() {
       currency: (event.metadata as { payment_details?: { currency?: string } } | undefined)?.payment_details?.currency ?? "USD",
       notes: (event.metadata as { payment_details?: { notes?: string } } | undefined)?.payment_details?.notes ?? "Please mention your ticket name and event title when paying.",
     });
+    const certificate = (event.metadata as { certificate?: { enabled?: boolean; template?: "classic" | "minimal" | "premium" } } | undefined)?.certificate ?? {};
+    setCertificateEnabled(Boolean(certificate.enabled ?? true));
+    setCertificateTemplate(certificate.template ?? "classic");
     reset({
       title: event.title,
       description: event.description
@@ -118,7 +123,17 @@ export default function EditEventPage() {
     setLoading(true);
     try {
       await updateEvent({
-        data: { ...data, payment_details: paymentDetails },
+        data: {
+          ...data,
+          payment_details: paymentDetails,
+          certificate_enabled: certificateEnabled,
+          certificate_template: certificateTemplate,
+          certificate_title: data.title ? `${data.title} Certificate` : "Certificate of Participation",
+          certificate_subtitle: "This is to certify that",
+          certificate_message: "has successfully attended this event and completed the session.",
+          certificate_signature_name: user.full_name || "Event Organizer",
+          certificate_signature_title: "Organizer",
+        },
         organizerId: user.id,
         slug: slugify(data.title),
         eventId: id,
@@ -170,6 +185,43 @@ export default function EditEventPage() {
             <div className="space-y-1.5">
               <Label>Tags (comma-separated)</Label>
               <Input {...register("tags")} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base font-semibold">Certificates</CardTitle>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Enable</Label>
+                <Switch checked={certificateEnabled} onCheckedChange={setCertificateEnabled} />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Certificate title</Label>
+                <Input defaultValue={`${event?.title || "Event"} Certificate`} placeholder="Certificate of Participation" disabled={!certificateEnabled} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Template</Label>
+                <Select value={certificateTemplate} onValueChange={(value) => setCertificateTemplate(value as "classic" | "minimal" | "premium")} disabled={!certificateEnabled}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="classic">Classic</SelectItem>
+                    <SelectItem value="minimal">Minimal</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Certificate message</Label>
+              <Textarea rows={3} defaultValue="has successfully attended this event and completed the session." disabled={!certificateEnabled} />
             </div>
           </CardContent>
         </Card>
